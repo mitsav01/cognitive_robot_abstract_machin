@@ -312,6 +312,11 @@ class EqualityDerivativeLinkModel:
 
 
 @dataclass
+class EqualityConstraintModel:
+    pass
+
+
+@dataclass
 class Weights(ProblemDataPart):
     """
     order:
