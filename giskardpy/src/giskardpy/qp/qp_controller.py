@@ -20,6 +20,7 @@ from giskardpy.qp.qp_data import (
     QPDataExplicit,
 )
 from giskardpy.qp.qp_data_factories import QPDataFactory
+from giskardpy.qp.qp_debugger import QPDebugger
 from giskardpy.qp.solvers.qp_solver import QPSolver
 from giskardpy.utils.utils import create_path
 from semantic_digital_twin.world_description.degree_of_freedom import DegreeOfFreedom
@@ -46,7 +47,7 @@ class QPController:
 
     qp_data_factory: QPDataFactory = field(default=None, init=False)
     qp_solver: QPSolver = field(default=None, init=False)
-    debugger: QPControllerDebugger = field(default=None, init=False)
+    debugger: QPDebugger = field(default=None, init=False)
 
     def __post_init__(self, degrees_of_freedom: List[DegreeOfFreedom]):
         self.qp_solver = self.config.qp_solver_class()
@@ -58,9 +59,8 @@ class QPController:
                 f'prediction horizon: "{self.config.prediction_horizon}"\n'
                 f'QP solver: "{self.config.qp_solver_class.__class__.__name__}"'
             )
-        self.debugger = QPControllerDebugger(self)
         self._set_active_dofs(degrees_of_freedom)
-        generic_qp_data_symbolic = QPDataSymbolic.from_giskard(
+        generic_qp_data_symbolic = QPDataSymbolic(
             degrees_of_freedom=self.active_dofs,
             constraint_collection=self.constraint_collection,
             config=self.config,
@@ -75,6 +75,7 @@ class QPController:
             life_cycle_symbols=self.life_cycle_variables,
             float_variables=self.float_variables,
         )
+        self.debugger = QPDebugger(qp_data_symbolic=self.qp_data_factory.qp_data)
 
     def _set_active_dofs(self, degrees_of_freedom: List[DegreeOfFreedom]):
         all_active_float_variables = set().union(
@@ -103,9 +104,7 @@ class QPController:
         self.dof_filter = np.array(
             [
                 i
-                for i, v in sorted(
-                    enumerate(self.world_state_symbols), key=lambda x: x[1].name
-                )
+                for i, v in enumerate(self.world_state_symbols)
                 if v.name in active_float_variables
             ]
         )

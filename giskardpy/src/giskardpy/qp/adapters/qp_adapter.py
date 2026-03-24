@@ -371,8 +371,10 @@ class DofLimits(DirectLimits):
             if t >= config.prediction_horizon - (max_derivative - derivative):
                 continue
             for degree_of_freedom in degrees_of_freedom:
-                lower_bounds.append(cache[degree_of_freedom.id].lower[derivative][t])
-                upper_bounds.append(cache[degree_of_freedom.id].upper[derivative][t])
+                lower_bound = cache[degree_of_freedom.id].lower[derivative][t]
+                upper_bound = cache[degree_of_freedom.id].upper[derivative][t]
+                lower_bounds.append(lower_bound)
+                upper_bounds.append(upper_bound)
 
         self.lower_bounds = sm.Vector(lower_bounds)
         self.upper_bounds = sm.Vector(upper_bounds)

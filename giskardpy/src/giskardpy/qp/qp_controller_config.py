@@ -98,7 +98,7 @@ class QPControllerConfig:
     If True, prints config.
     """
 
-    radian_normalization_number: float = field(default=0.2)
+    radian_normalization_number: float = field(default=1)
     meter_normalization_number: float = field(default=0.2)
 
     # %% init false

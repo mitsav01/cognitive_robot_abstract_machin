@@ -35,7 +35,7 @@ date_str = datetime.datetime.now().strftime("%Yy-%mm-%dd--%Hh-%Mm-%Ss")
 @dataclass
 class QPDebugger:
     qp_data_symbolic: QPDataSymbolic
-    last_solution: np.ndarray | None = field(default=None)
+    current_solution: np.ndarray | None = field(default=None)
     direct_limits: pandas.DataFrame = field(init=False)
     equality_constraints: pandas.DataFrame = field(init=False)
     equality_matrix: pandas.DataFrame = field(init=False)
@@ -50,12 +50,16 @@ class QPDebugger:
     # debug: pandas.DataFrame = field(init=False)
 
     def __post_init__(self):
+        self.update(self.current_solution)
+
+    def update(self, current_solution: np.ndarray):
+        self.current_solution = current_solution
         last_solution = (
             np.ones(self.qp_data_symbolic.box_lower_constraints.shape[0]) * np.nan
         )
-        if self.last_solution is not None:
-            last_solution[self.quadratic_weight_filter] = self.last_solution
-        self.last_solution = last_solution
+        if self.current_solution is not None:
+            last_solution[self.quadratic_weight_filter] = self.current_solution
+        self.current_solution = last_solution
         self.create_direct_limits()
         self.create_equality_constraints()
 
@@ -76,7 +80,7 @@ class QPDebugger:
         self.direct_limits = pd.DataFrame(
             {
                 "lower bounds": self.qp_data_symbolic.box_lower_constraints.evaluate(),
-                "solution": self.last_solution,
+                "solution": self.current_solution,
                 "upper bounds": self.qp_data_symbolic.box_upper_constraints.evaluate(),
                 "quadratic weight": self.qp_data_symbolic.quadratic_weights.evaluate(),
                 "linear weight": self.qp_data_symbolic.linear_weights.evaluate(),
@@ -88,7 +92,7 @@ class QPDebugger:
     def create_equality_constraints(self):
         eq_matrix_dofs_np = self.qp_data_symbolic.eq_matrix_dofs.evaluate()
         eq_matrix_slack_np = self.qp_data_symbolic.eq_matrix_slack.evaluate()
-        Ex = eq_matrix_dofs_np @ self.last_solution[: eq_matrix_dofs_np.shape[1]]
+        Ex = eq_matrix_dofs_np @ self.current_solution[: eq_matrix_dofs_np.shape[1]]
         bounds = self.qp_data_symbolic.eq_bounds.evaluate()
         self.equality_constraints = pd.DataFrame(
             {
@@ -352,20 +356,6 @@ class QPDebugger:
     @property
     def inequality_constr_names(self):
         return self.qp_controller.qp_data_factory.qp_data._inequality_bounds.names
-
-    def update(
-        self,
-        qp_data: QPDataExplicit,
-        new_xdot_full: Optional[np.ndarray],
-    ) -> None:
-        self._update_quadratic_weights(qp_data)
-        self._update_linear_weights(qp_data)
-        self._update_box_constraints(qp_data)
-        self._update_eq_constraints(qp_data)
-        self._update_inequality_constraints(qp_data)
-        self._update_equality_matrix(qp_data)
-        self._update_inequality_matrix(qp_data)
-        self._update_xdot(qp_data, new_xdot_full)
 
     def _print_iis(self):
         import pandas as pd
