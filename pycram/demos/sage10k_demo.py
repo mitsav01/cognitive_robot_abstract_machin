@@ -1,3 +1,21 @@
+"""
+Sage10k Demos Runner
+====================
+
+This script executes all available demos in the Sage10k dataset. It iterates through
+all subclasses of Sage10kAbstractDemo, setting up the simulation environment for each,
+and executing the predefined robot plans.
+
+Each demo run involves:
+1. Creating the simulation world.
+2. Initializing a ROS 2 node and executor.
+3. Starting a visualization marker publisher for real-time feedback.
+4. Performing the robot's plan in a simulated environment.
+
+.. warning::
+    Running this script executes all demos in sequence, which takes approximately 20 minutes to complete.
+"""
+
 import threading
 import time
 
@@ -7,7 +25,7 @@ from rclpy.executors import SingleThreadedExecutor
 
 from krrood.utils import recursive_subclasses
 from pycram.motion_executor import simulated_robot
-from pycram.robot_plans.actions.sage10k_actions import *
+from pycram.sage_10k.demos import *
 from semantic_digital_twin.adapters.ros.visualization.viz_marker import (
     VizMarkerPublisher,
 )
@@ -15,31 +33,21 @@ from semantic_digital_twin.orm.ormatic_interface import *  # type: ignore
 from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 from semantic_digital_twin.world_description.connections import FixedConnection
 
-demo = Sage10kCraftsmanLobbyDemo()
-
 
 def run_demo(demo: Sage10kAbstractDemo):
+    """
+    Runs a single Sage10k demo.
+
+    This function initializes a ROS 2 node, sets up the simulation world,
+    starts a visualization marker publisher, and performs the robot's plan.
+
+    :param demo: The demo instance to run.
+    """
     demo.create_world()
     if not rclpy.ok():
         rclpy.init()
     node = rclpy.create_node("test_node")
 
-    with demo.world.modify_world():
-        camera_frame = Body(name=PrefixedName("camera_link"))
-        robot = demo.world.get_semantic_annotations_by_type(HSRB)[0]
-        camera_to_robot_connection = FixedConnection(
-            parent=robot.root,
-            child=camera_frame,
-            parent_T_connection_expression=HomogeneousTransformationMatrix.from_xyz_rpy(
-                x=-0.28,
-                y=0.33,
-                z=0,
-                yaw=np.pi,
-                pitch=np.pi / 4,
-                roll=0,
-            ),
-        )
-        demo.world.add_connection(camera_to_robot_connection)
     executor = SingleThreadedExecutor()
     executor.add_node(node)
 
@@ -57,20 +65,8 @@ def run_demo(demo: Sage10kAbstractDemo):
     del demo
 
 
-demos = [
-    Sage10kGymDemo,
-    Sage10kTVStudioDemo,
-    Sage10kCraftsmanLobbyDemo,
-    Sage10kTropicalWarehouse,
-    Sage10kVaporwave,
-    Sage10kEclecticResidence,
-    Sage10kSouthwesternStoreDemo,
-    Sage10kBrutalistStoreDemo,
-    Sage10kAmericanBuffetDemo,
-]
-
-# pbar = tqdm.tqdm(recursive_subclasses(Sage10kAbstractDemo))
-pbar = tqdm.tqdm([Sage10kVaporwave], mininterval=1)
-for demo in pbar:
-    pbar.set_postfix({"Current Scene": demo.scene_url.name})
-    run_demo(demo())
+if __name__ == "__main__":
+    pbar = tqdm.tqdm(recursive_subclasses(Sage10kAbstractDemo))
+    for demo in pbar:
+        pbar.set_postfix({"Current Scene": demo.scene_url.name})
+        run_demo(demo())

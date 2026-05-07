@@ -94,7 +94,6 @@ import pycram.plans.plan_entity
 import pycram.plans.plan_node
 import pycram.robot_plans.actions.base
 import pycram.robot_plans.actions.composite.facing
-import pycram.robot_plans.actions.composite.sage10k_actions
 import pycram.robot_plans.actions.composite.searching
 import pycram.robot_plans.actions.composite.tool_based
 import pycram.robot_plans.actions.composite.transporting
@@ -104,7 +103,6 @@ import pycram.robot_plans.actions.core.navigation
 import pycram.robot_plans.actions.core.pick_up
 import pycram.robot_plans.actions.core.placing
 import pycram.robot_plans.actions.core.robot_body
-import pycram.robot_plans.actions.sage10k_actions
 import pycram.robot_plans.motions.base
 import pycram.robot_plans.motions.container
 import pycram.robot_plans.motions.gripper
@@ -112,11 +110,11 @@ import pycram.robot_plans.motions.misc
 import pycram.robot_plans.motions.navigation
 import pycram.robot_plans.motions.robot_body
 import pycram.robot_plans.training_environment
+import pycram.sage_10k.demos
+import pycram.sage_10k.sage10k_actions
 import pycram.view_manager
-import semantic_digital_twin.adapters.sage_10k_dataset.filter
 import semantic_digital_twin.adapters.sage_10k_dataset.loader
 import semantic_digital_twin.adapters.sage_10k_dataset.schema
-import semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations
 import semantic_digital_twin.callbacks.callback
 import semantic_digital_twin.collision_checking.collision_detector
 import semantic_digital_twin.collision_checking.collision_groups
@@ -10131,8 +10129,7 @@ class RotationMappedDAO(
 
 
 class Sage10kAbstractDemoDAO(
-    Base,
-    DataAccessObject[pycram.robot_plans.actions.sage10k_actions.Sage10kAbstractDemo],
+    Base, DataAccessObject[pycram.sage_10k.demos.Sage10kAbstractDemo]
 ):
 
     __tablename__ = "Sage10kAbstractDemoDAO"
@@ -10153,9 +10150,7 @@ class Sage10kAbstractDemoDAO(
 
 class Sage10kAmericanBuffetDemoDAO(
     Sage10kAbstractDemoDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.sage10k_actions.Sage10kAmericanBuffetDemo
-    ],
+    DataAccessObject[pycram.sage_10k.demos.Sage10kAmericanBuffetDemo],
 ):
 
     __tablename__ = "Sage10kAmericanBuffetDemoDAO"
@@ -10220,9 +10215,7 @@ class HasXYZDAO(
 
 class Sage10kBrutalistStoreDemoDAO(
     Sage10kAbstractDemoDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.sage10k_actions.Sage10kBrutalistStoreDemo
-    ],
+    DataAccessObject[pycram.sage_10k.demos.Sage10kBrutalistStoreDemo],
 ):
 
     __tablename__ = "Sage10kBrutalistStoreDemoDAO"
@@ -10241,9 +10234,7 @@ class Sage10kBrutalistStoreDemoDAO(
 
 class Sage10kCraftsmanLobbyDemoDAO(
     Sage10kAbstractDemoDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.sage10k_actions.Sage10kCraftsmanLobbyDemo
-    ],
+    DataAccessObject[pycram.sage_10k.demos.Sage10kCraftsmanLobbyDemo],
 ):
 
     __tablename__ = "Sage10kCraftsmanLobbyDemoDAO"
@@ -10276,9 +10267,7 @@ class Sage10kDatasetLoaderDAO(
 
 class Sage10kEclecticResidenceDAO(
     Sage10kAbstractDemoDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.sage10k_actions.Sage10kEclecticResidence
-    ],
+    DataAccessObject[pycram.sage_10k.demos.Sage10kEclecticResidence],
 ):
 
     __tablename__ = "Sage10kEclecticResidenceDAO"
@@ -10296,8 +10285,7 @@ class Sage10kEclecticResidenceDAO(
 
 
 class Sage10kGymDemoDAO(
-    Sage10kAbstractDemoDAO,
-    DataAccessObject[pycram.robot_plans.actions.sage10k_actions.Sage10kGymDemo],
+    Sage10kAbstractDemoDAO, DataAccessObject[pycram.sage_10k.demos.Sage10kGymDemo]
 ):
 
     __tablename__ = "Sage10kGymDemoDAO"
@@ -10316,9 +10304,7 @@ class Sage10kGymDemoDAO(
 
 class Sage10kOpenDoorDAO(
     ActionDescriptionDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.composite.sage10k_actions.Sage10kOpenDoor
-    ],
+    DataAccessObject[pycram.sage_10k.sage10k_actions.Sage10kOpenDoor],
 ):
 
     __tablename__ = "Sage10kOpenDoorDAO"
@@ -10427,9 +10413,7 @@ class Sage10kSizeDAO(
 
 class Sage10kSouthwesternStoreDemoDAO(
     Sage10kAbstractDemoDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.sage10k_actions.Sage10kSouthwesternStoreDemo
-    ],
+    DataAccessObject[pycram.sage_10k.demos.Sage10kSouthwesternStoreDemo],
 ):
 
     __tablename__ = "Sage10kSouthwesternStoreDemoDAO"
@@ -10447,8 +10431,7 @@ class Sage10kSouthwesternStoreDemoDAO(
 
 
 class Sage10kTVStudioDemoDAO(
-    Sage10kAbstractDemoDAO,
-    DataAccessObject[pycram.robot_plans.actions.sage10k_actions.Sage10kTVStudioDemo],
+    Sage10kAbstractDemoDAO, DataAccessObject[pycram.sage_10k.demos.Sage10kTVStudioDemo]
 ):
 
     __tablename__ = "Sage10kTVStudioDemoDAO"
@@ -10467,9 +10450,7 @@ class Sage10kTVStudioDemoDAO(
 
 class Sage10kTropicalWarehouseDAO(
     Sage10kAbstractDemoDAO,
-    DataAccessObject[
-        pycram.robot_plans.actions.sage10k_actions.Sage10kTropicalWarehouse
-    ],
+    DataAccessObject[pycram.sage_10k.demos.Sage10kTropicalWarehouse],
 ):
 
     __tablename__ = "Sage10kTropicalWarehouseDAO"
@@ -10486,23 +10467,8 @@ class Sage10kTropicalWarehouseDAO(
     }
 
 
-class Sage10kTypeNameCleanerDAO(
-    Base,
-    DataAccessObject[
-        semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations.Sage10kTypeNameCleaner
-    ],
-):
-
-    __tablename__ = "Sage10kTypeNameCleanerDAO"
-
-    database_id: Mapped[builtins.int] = mapped_column(
-        Integer, primary_key=True, use_existing_column=True
-    )
-
-
 class Sage10kVaporwaveDAO(
-    Sage10kAbstractDemoDAO,
-    DataAccessObject[pycram.robot_plans.actions.sage10k_actions.Sage10kVaporwave],
+    Sage10kAbstractDemoDAO, DataAccessObject[pycram.sage_10k.demos.Sage10kVaporwave]
 ):
 
     __tablename__ = "Sage10kVaporwaveDAO"
@@ -10837,33 +10803,6 @@ class ScaleDAO(
     x: Mapped[builtins.float] = mapped_column(use_existing_column=True)
     y: Mapped[builtins.float] = mapped_column(use_existing_column=True)
     z: Mapped[builtins.float] = mapped_column(use_existing_column=True)
-
-
-class SceneObjectTypeHistogramDAO(
-    Base,
-    DataAccessObject[
-        semantic_digital_twin.adapters.sage_10k_dataset.filter.SceneObjectTypeHistogram
-    ],
-):
-
-    __tablename__ = "SceneObjectTypeHistogramDAO"
-
-    database_id: Mapped[builtins.int] = mapped_column(
-        Integer, primary_key=True, use_existing_column=True
-    )
-
-    cleaner_id: Mapped[int] = mapped_column(
-        ForeignKey("Sage10kTypeNameCleanerDAO.database_id", use_alter=True),
-        nullable=True,
-        use_existing_column=True,
-    )
-
-    cleaner: Mapped[Sage10kTypeNameCleanerDAO] = relationship(
-        "Sage10kTypeNameCleanerDAO",
-        uselist=False,
-        foreign_keys=[cleaner_id],
-        post_update=True,
-    )
 
 
 class SearchActionDAO(
@@ -17154,7 +17093,7 @@ class DoorDAO(
 class DoorWithTypeDAO(
     DoorDAO,
     DataAccessObject[
-        semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations.DoorWithType
+        semantic_digital_twin.semantic_annotations.semantic_annotations.DoorWithType
     ],
 ):
 
@@ -17908,14 +17847,14 @@ class NaturalLanguageDescriptionDAO(
     }
 
 
-class NaturalLanguageDescriptionWithTypeDescriptionDAO(
+class NaturalLanguageWithTypeDescriptionDAO(
     NaturalLanguageDescriptionDAO,
     DataAccessObject[
-        semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations.NaturalLanguageDescriptionWithTypeDescription
+        semantic_digital_twin.semantic_annotations.natural_language.NaturalLanguageWithTypeDescription
     ],
 ):
 
-    __tablename__ = "NaturalLanguageDescriptionWithTypeDescriptionDAO"
+    __tablename__ = "NaturalLanguageWithTypeDescriptionDAO"
 
     database_id: Mapped[builtins.int] = mapped_column(
         ForeignKey(NaturalLanguageDescriptionDAO.database_id),
@@ -17928,7 +17867,7 @@ class NaturalLanguageDescriptionWithTypeDescriptionDAO(
     )
 
     __mapper_args__ = {
-        "polymorphic_identity": "NaturalLanguageDescriptionWithTypeDescriptionDAO",
+        "polymorphic_identity": "NaturalLanguageWithTypeDescriptionDAO",
         "inherit_condition": database_id == NaturalLanguageDescriptionDAO.database_id,
     }
 
@@ -18472,7 +18411,7 @@ class LivingRoomDAO(
 class RoomWithWallsAndDoorsDAO(
     RoomDAO,
     DataAccessObject[
-        semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations.RoomWithWallsAndDoors
+        semantic_digital_twin.semantic_annotations.semantic_annotations.RoomWithWallsAndDoors
     ],
 ):
 

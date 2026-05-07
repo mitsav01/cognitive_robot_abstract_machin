@@ -12,31 +12,25 @@ from pycram.datastructures.enums import Arms, ApproachDirection, VerticalAlignme
 from pycram.datastructures.grasp import GraspDescription
 from pycram.plans.factories import sequential
 from pycram.plans.plan import Plan
-from pycram.robot_plans.actions.composite.sage10k_actions import Sage10kOpenDoor
+from pycram.sage_10k.sage10k_actions import Sage10kOpenDoor
 from pycram.robot_plans.actions.composite.transporting import (
     MoveAndPickUpAction,
     MoveAndPlaceAction,
 )
 from pycram.robot_plans.actions.core.navigation import NavigateAction
-from pycram.robot_plans.actions.core.misc import MoveToReach
-from pycram.robot_plans.actions.core.navigation import NavigateAction
-from pycram.robot_plans.actions.core.pick_up import PickUpAction
 from pycram.robot_plans.actions.core.robot_body import ParkArmsAction
 from semantic_digital_twin.adapters.sage_10k_dataset.loader import Sage10kDatasetLoader
-from semantic_digital_twin.adapters.sage_10k_dataset.processing import (
+from semantic_digital_twin.adapters.sage_10k_dataset.utils import (
+    Sage10kActionableScenes,
     create_hsrb_in_world,
 )
-from semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations import (
-    Sage10kNonShittyScenes,
-    NaturalLanguageDescriptionWithTypeDescription,
+from semantic_digital_twin.semantic_annotations.semantic_annotations import (
     RoomWithWallsAndDoors,
     DoorWithType,
 )
-from semantic_digital_twin.reasoning.predicates import (
-    compute_euclidean_planar_distance,
-    is_supported_by,
+from semantic_digital_twin.semantic_annotations.natural_language import (
+    NaturalLanguageWithTypeDescription,
 )
-from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.reasoning.predicates import (
     compute_euclidean_planar_distance,
     is_supported_by,
@@ -51,7 +45,8 @@ from semantic_digital_twin.world_description.world_entity import Body
 @dataclass
 class Sage10kAbstractDemo:
     """
-    Configuration for the Sage10k non-shitty scenes demo.
+    Base class for all Sage10k demos with the HSRB robot.
+    Extend this class to create a new demo.
     """
 
     scene_url: ClassVar[str]
@@ -64,15 +59,26 @@ class Sage10kAbstractDemo:
     The world to execute the demo in. Only available after """
 
     def create_world(self):
+        """
+        Create the world and the HSRB robot.
+        Updated self.world `in-place`.
+        """
         loader = Sage10kDatasetLoader()
         self.world = loader.create_scene(scene_url=self.scene_url).create_world()
         create_hsrb_in_world(self.world)
         self.preprocess_world()
 
     def preprocess_world(self):
+        """
+        Preprocess the world before executing the demo `in-place`.
+        Removes every body associated with a NaturalLanguageWithTypeDescription too close to the
+        main entrance.
+
+        Can only be used after the world has been created.
+        """
         self.robot.root.parent_connection.origin = self.robot_starting_pose
         v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         obstacles_of_main_entrance = an(
@@ -91,6 +97,12 @@ class Sage10kAbstractDemo:
         return self.world.get_semantic_annotations_by_type(HSRB)[0]
 
     def remove_rooted_annotations(self, semantic_annotations: Iterable[HasRootBody]):
+        """
+        Remove the given semantic annotations and their root bodies from the world.
+        Updated self.world `in-place`.
+
+        :param semantic_annotations: The semantic annotations to remove.
+        """
         with self.world.modify_world():
             for annotation in semantic_annotations:
                 self.world.remove_kinematic_structure_entity(annotation.root)
@@ -101,7 +113,7 @@ class Sage10kAbstractDemo:
         raise NotImplementedError
 
     @cached_property
-    def main_entrance(self):
+    def main_entrance(self) -> DoorWithType:
         door_v = variable(DoorWithType, self.world.semantic_annotations)
         main_entrance: DoorWithType = an(entity(door_v)).first()
         return main_entrance
@@ -117,7 +129,7 @@ class Sage10kGymDemo(Sage10kAbstractDemo):
     Collect a bottle from the bench and put it in the bin.
     """
 
-    scene_url: ClassVar[str] = Sage10kNonShittyScenes.GYM
+    scene_url: ClassVar[str] = Sage10kActionableScenes.GYM
 
     @property
     def robot_starting_pose(self) -> Pose:
@@ -209,21 +221,11 @@ class Sage10kTVStudioDemo(Sage10kAbstractDemo):
     Get the book from the table and present it to the audience.
     """
 
-    scene_url: ClassVar[str] = Sage10kNonShittyScenes.TV_STUDIO
+    scene_url: ClassVar[str] = Sage10kActionableScenes.TV_STUDIO
 
     @property
     def robot_starting_pose(self) -> Pose:
         return Pose.from_xyz_rpy(x=12.5, y=3, z=0, reference_frame=self.world.root)
-
-    @property
-    def pickup_navigation_pose(self):
-        return Pose.from_xyz_rpy(
-            x=6.83,
-            y=5.38,
-            z=self.robot.root.global_pose.z,
-            yaw=1.78,
-            reference_frame=self.world.root,
-        )
 
     @property
     def book_to_pick(self) -> Body:
@@ -232,7 +234,7 @@ class Sage10kTVStudioDemo(Sage10kAbstractDemo):
             return self.world.transform(target.global_pose, couch_table.root).y
 
         v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         couch_table = an(
@@ -240,7 +242,7 @@ class Sage10kTVStudioDemo(Sage10kAbstractDemo):
         ).first()
 
         v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         target = an(
@@ -271,7 +273,13 @@ class Sage10kTVStudioDemo(Sage10kAbstractDemo):
         )
         open_door = Sage10kOpenDoor(self.main_entrance)
         mpa = MoveAndPickUpAction(
-            standing_position=self.pickup_navigation_pose,
+            standing_position=Pose.from_xyz_rpy(
+                x=6.83,
+                y=5.38,
+                z=self.robot.root.global_pose.z,
+                yaw=1.78,
+                reference_frame=self.world.root,
+            ),
             object_designator=self.book_to_pick,
             arm=Arms.LEFT,
             grasp_description=grasp_description,
@@ -287,7 +295,7 @@ class Sage10kCraftsmanLobbyDemo(Sage10kAbstractDemo):
     Put something to read next to the clean couch.
     """
 
-    scene_url: ClassVar[str] = Sage10kNonShittyScenes.CRAFTSMAN_LOBBY
+    scene_url: ClassVar[str] = Sage10kActionableScenes.CRAFTSMAN_LOBBY
 
     @property
     def robot_starting_pose(self) -> Pose:
@@ -310,7 +318,7 @@ class Sage10kCraftsmanLobbyDemo(Sage10kAbstractDemo):
             return self.world.transform(target.global_pose, couch_table.root).y
 
         v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         couch_table = an(
@@ -318,7 +326,7 @@ class Sage10kCraftsmanLobbyDemo(Sage10kAbstractDemo):
         ).first()
 
         v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         target = an(
@@ -375,7 +383,7 @@ class Sage10kTropicalWarehouse(Sage10kAbstractDemo):
     Fetch me a cup from the warehouse.
     """
 
-    scene_url: ClassVar[str] = Sage10kNonShittyScenes.TROPICAL_WAREHOUSE
+    scene_url: ClassVar[str] = Sage10kActionableScenes.TROPICAL_WAREHOUSE
 
     @property
     def robot_starting_pose(self) -> Pose:
@@ -398,7 +406,7 @@ class Sage10kTropicalWarehouse(Sage10kAbstractDemo):
             x=2.19, y=7.64, z=0.35, reference_frame=self.world.root
         ).position
         target_v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         target = (
@@ -454,7 +462,7 @@ class Sage10kVaporwave(Sage10kAbstractDemo):
     Fetch me a cup from the warehouse.
     """
 
-    scene_url: ClassVar[str] = Sage10kNonShittyScenes.VAPORWAVE
+    scene_url: ClassVar[str] = Sage10kActionableScenes.VAPORWAVE
 
     @property
     def robot_starting_pose(self) -> Pose:
@@ -477,7 +485,7 @@ class Sage10kVaporwave(Sage10kAbstractDemo):
             x=0.468, y=4.87, z=0.528, reference_frame=self.world.root
         ).position
         target_v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         target = (
@@ -533,7 +541,7 @@ class Sage10kEclecticResidence(Sage10kAbstractDemo):
     Fetch me a cup from the warehouse.
     """
 
-    scene_url: ClassVar[str] = Sage10kNonShittyScenes.ECLECTIC_RESIDENCE
+    scene_url: ClassVar[str] = Sage10kActionableScenes.ECLECTIC_RESIDENCE
 
     @property
     def robot_starting_pose(self) -> Pose:
@@ -558,7 +566,7 @@ class Sage10kEclecticResidence(Sage10kAbstractDemo):
             x=2.66, y=4.35, z=0.442, reference_frame=self.world.root
         ).position
         target_v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         target = (
@@ -581,6 +589,12 @@ class Sage10kEclecticResidence(Sage10kAbstractDemo):
             manipulator=context.robot.arm.manipulator,
             rotate_gripper=True,
         )
+        navigate1 = NavigateAction(
+            Pose.from_xyz_rpy(x=1.27, y=4.45, reference_frame=self.world.root)
+        )
+        navigate2 = NavigateAction(
+            Pose.from_xyz_rpy(x=1.27, y=4.45, reference_frame=self.world.root)
+        )
         mpu = MoveAndPickUpAction(
             standing_position=self.pickup_navigation_pose,
             object_designator=self.target_to_pick,
@@ -593,14 +607,22 @@ class Sage10kEclecticResidence(Sage10kAbstractDemo):
         present = NavigateAction(target_location=self.robot_starting_pose)
 
         return sequential(
-            [open_door, park_arms, mpu, ParkArmsAction(arm=Arms.LEFT), present],
+            [
+                open_door,
+                navigate1,
+                park_arms,
+                mpu,
+                ParkArmsAction(arm=Arms.LEFT),
+                navigate2,
+                present,
+            ],
             context=context,
         ).plan
 
 
 @dataclass
 class Sage10kSouthwesternStoreDemo(Sage10kAbstractDemo):
-    scene_url = Sage10kNonShittyScenes.SOUTHWESTERN_STORE
+    scene_url = Sage10kActionableScenes.SOUTHWESTERN_STORE
 
     @property
     def plan(self):
@@ -661,7 +683,7 @@ class Sage10kSouthwesternStoreDemo(Sage10kAbstractDemo):
             x=1.7, y=0.49, z=1.17, reference_frame=self.world.root
         )
         v_final = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         bottle = (
@@ -706,7 +728,7 @@ class Sage10kSouthwesternStoreDemo(Sage10kAbstractDemo):
     def preprocess_world(self):
         super().preprocess_world()
         v = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         obstacles_of_main_entrance = an(
@@ -724,7 +746,7 @@ class Sage10kSouthwesternStoreDemo(Sage10kAbstractDemo):
 
 @dataclass
 class Sage10kBrutalistStoreDemo(Sage10kAbstractDemo):
-    scene_url = Sage10kNonShittyScenes.BRUTALIST_STORE
+    scene_url = Sage10kActionableScenes.BRUTALIST_STORE
 
     @property
     def plan(self):
@@ -779,7 +801,7 @@ class Sage10kBrutalistStoreDemo(Sage10kAbstractDemo):
             x=8.28, y=0.35, z=0.69, reference_frame=self.world.root
         )
         v_final = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         bottle = (
@@ -830,7 +852,7 @@ class Sage10kBrutalistStoreDemo(Sage10kAbstractDemo):
 
 @dataclass
 class Sage10kAmericanBuffetDemo(Sage10kAbstractDemo):
-    scene_url = Sage10kNonShittyScenes.AMERICAN_BUFFET_RESTAURANT
+    scene_url = Sage10kActionableScenes.AMERICAN_BUFFET_RESTAURANT
 
     @property
     def plan(self):
@@ -843,7 +865,6 @@ class Sage10kAmericanBuffetDemo(Sage10kAbstractDemo):
         )
         open_door = Sage10kOpenDoor(self.main_entrance)
         navigate = Pose.from_xyz_rpy(x=5.14, y=2.85, reference_frame=self.world.root)
-        # self.robot.root. = self.robot_starting_pose
 
         plan = sequential(
             [
@@ -880,11 +901,11 @@ class Sage10kAmericanBuffetDemo(Sage10kAbstractDemo):
 
         pose = Pose.from_xyz_rpy(x=4.06, y=8.64, reference_frame=self.world.root)
         v_table = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         v_cup = variable(
-            NaturalLanguageDescriptionWithTypeDescription,
+            NaturalLanguageWithTypeDescription,
             self.world.semantic_annotations,
         )
         table = an(entity(v_table)).where(

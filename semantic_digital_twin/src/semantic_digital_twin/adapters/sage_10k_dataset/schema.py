@@ -11,10 +11,8 @@ from typing_extensions import Optional, Tuple, assert_never
 from krrood.adapters.exceptions import JSON_TYPE_NAME
 from krrood.adapters.json_serializer import SubclassJSONSerializer, to_json
 from krrood.utils import get_full_class_name
-from semantic_digital_twin.adapters.sage_10k_dataset.semantic_annotations import (
-    NaturalLanguageDescriptionWithTypeDescription,
-    RoomWithWallsAndDoors,
-    DoorWithType,
+from semantic_digital_twin.semantic_annotations.natural_language import (
+    NaturalLanguageWithTypeDescription,
 )
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.datastructures.variables import SpatialVariables
@@ -24,6 +22,8 @@ from semantic_digital_twin.semantic_annotations.semantic_annotations import (
     Door,
     Handle,
     Hinge,
+    RoomWithWallsAndDoors,
+    DoorWithType,
 )
 from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix, Vector3
 from semantic_digital_twin.spatial_types.derivatives import DerivativeMap
@@ -458,7 +458,7 @@ class Sage10kObject(Sage10kWithID):
             world.add_connection(root_C_body)
 
         # create semantic annotation
-        annotation = NaturalLanguageDescriptionWithTypeDescription(
+        annotation = NaturalLanguageWithTypeDescription(
             root=body, description=self.description, type_description=self.type
         )
 

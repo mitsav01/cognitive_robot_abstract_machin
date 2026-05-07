@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto, StrEnum
+from pathlib import Path
 from types import FunctionType
 from typing import Set, Generic
 
@@ -715,3 +716,8 @@ class GenericClassAssociation:
     associated_value_not_parametrized_list: List[GenericClass] = field(
         default_factory=list
     )
+
+
+@dataclass
+class PathAssociation:
+    path: Path
