@@ -382,6 +382,32 @@ class TestPouringPredicates:
         )
         assert not Causes(effect=effect, environment=world, motion=motion)()
 
+    def test_pouring_can_perform(self, pr2_world_with_cup):
+        """PouringCanPerform confirms the PR2 can execute the tilt trajectory from Causes."""
+        world, cup, robot = pr2_world_with_cup
+
+        goal_fill = 0.6
+        effect = PouringEffect(
+            target_object=cup,
+            property_getter=lambda c: c.fill_level,
+            goal_value=goal_fill,
+        )
+        motion = Motion(
+            trajectory=[],
+            actuator=cup.root.parent_connection,
+            motion_model=PouringMSCModel(
+                fill_equation=cup.fill_equation,
+                fill_connection=cup.fill_connection,
+                tilt_connection=cup.root.parent_connection,
+                root_link=world.root,
+                tip_link=cup.root,
+            ),
+        )
+
+        causes = Causes(effect=effect, environment=world, motion=motion)
+        assert causes()
+        assert PouringCanPerform(motion=motion, robot=robot)()
+
 
 # ---------------------------------------------------------------------------
 # 3. EQL integration tests: container manipulation queries
@@ -531,32 +557,6 @@ class TestPouringQueries:
 
         causes.replay(step_delay=0.001)
         assert cup.fill_level == pytest.approx(goal_fill, abs=0.1)
-
-    def test_pouring_can_perform(self, pr2_world_with_cup):
-        """PouringCanPerform confirms the PR2 can execute the tilt trajectory from Causes."""
-        world, cup, robot = pr2_world_with_cup
-
-        goal_fill = 0.6
-        effect = PouringEffect(
-            target_object=cup,
-            property_getter=lambda c: c.fill_level,
-            goal_value=goal_fill,
-        )
-        motion = Motion(
-            trajectory=[],
-            actuator=cup.root.parent_connection,
-            motion_model=PouringMSCModel(
-                fill_equation=cup.fill_equation,
-                fill_connection=cup.fill_connection,
-                tilt_connection=cup.root.parent_connection,
-                root_link=world.root,
-                tip_link=cup.root,
-            ),
-        )
-
-        causes = Causes(effect=effect, environment=world, motion=motion)
-        assert causes()
-        assert PouringCanPerform(motion=motion, robot=robot)()
 
     def test_eql_query_all_three_predicates(self, pr2_world_with_cup):
         """EQL query resolves task, effect, and motion simultaneously across all three BMP predicates."""

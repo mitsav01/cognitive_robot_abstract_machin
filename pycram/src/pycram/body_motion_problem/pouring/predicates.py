@@ -13,7 +13,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from giskardpy.motion_statechart.goals.templates import Sequence
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
+from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from semantic_digital_twin.collision_checking.collision_rules import (
     AllowCollisionBetweenGroups,
     AvoidExternalCollisions,
@@ -67,8 +69,16 @@ class PouringCanPerform(CanPerform):
         Build the MotionStatechart for following the cup tilt trajectory.
         """
         msc = MotionStatechart()
-        full_sequence = self._build_cartesian_waypoint_sequence(
-            trajectory, root, gripper.tool_frame
+        full_sequence = Sequence(
+            [
+                CartesianPose(
+                    root_link=root,
+                    tip_link=gripper.tool_frame,
+                    goal_pose=pose,
+                    name=f"pose_{i}",
+                )
+                for i, pose in enumerate(trajectory)
+            ]
         )
         msc.add_node(full_sequence)
         self._add_motion_termination_nodes(msc, full_sequence, self.robot)

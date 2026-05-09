@@ -229,38 +229,6 @@ class CanPerform(Predicate):
         return result
 
     @staticmethod
-    def _build_cartesian_waypoint_sequence(
-        poses: list,
-        root_link,
-        tip_link,
-        name_prefix: str = "waypoint",
-        sequence_name: str = "full_trajectory_sequence",
-        threshold: float = 0.05,
-    ) -> Sequence:
-        """
-        Build a Sequence of CartesianPose waypoints from a list of target poses.
-
-        :param poses: Ordered list of goal poses for the tip link.
-        :param root_link: Root link for the Cartesian goal.
-        :param tip_link: Tip link (e.g. gripper tool frame) to move.
-        :param name_prefix: Prefix for individual waypoint node names.
-        :param sequence_name: Name of the resulting Sequence node.
-        :param threshold: Position tolerance for each waypoint.
-        :return: A Sequence node ready to be added to a MotionStatechart.
-        """
-        waypoints = [
-            CartesianPose(
-                root_link=root_link,
-                tip_link=tip_link,
-                goal_pose=pose,
-                name=f"{name_prefix}_{i}",
-                threshold=threshold,
-            )
-            for i, pose in enumerate(poses)
-        ]
-        return Sequence(nodes=waypoints, name=sequence_name)
-
-    @staticmethod
     def _add_motion_termination_nodes(
         msc: MotionStatechart,
         sequence: Sequence,

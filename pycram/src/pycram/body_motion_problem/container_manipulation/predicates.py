@@ -12,8 +12,12 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 
+from giskardpy.motion_statechart.goals.templates import Sequence, Parallel
 from giskardpy.motion_statechart.motion_statechart import MotionStatechart
-from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
+from giskardpy.motion_statechart.tasks.cartesian_tasks import (
+    CartesianPose,
+    CartesianPositionTrajectory,
+)
 from giskardpy.motion_statechart.tasks.pointing import Pointing
 from krrood.entity_query_language.factories import an, entity, variable, or_, and_
 from krrood.entity_query_language.predicate import HasType
@@ -30,6 +34,8 @@ from semantic_digital_twin.world_description.world_entity import (
     Body,
     SemanticAnnotation,
 )
+from spatial_types import Point3
+from spatial_types.spatial_types import Pose
 
 
 @dataclass
@@ -77,7 +83,7 @@ class ContainerCanPerform(CanPerform):
             ).evaluate()
         )[0].handle
 
-    def _compute_body_trajectory(self, target: Body) -> list:
+    def _compute_body_trajectory(self, target: Body) -> list[Pose]:
         """
         Convert the actuator-space trajectory to a sequence of handle poses in world space.
         """
@@ -108,16 +114,17 @@ class ContainerCanPerform(CanPerform):
         ]
 
     def _build_msc(
-        self, root: Body, gripper: Manipulator, target: Body, trajectory: list
+        self, root: Body, gripper: Manipulator, target: Body, trajectory: list[Pose]
     ) -> MotionStatechart:
         """
         Build the MotionStatechart for approaching and following the handle trajectory.
         """
-        approach_trajectory = trajectory[: len(trajectory) // 4][::-1]
+        full_trajectory: list[Point3] = [pose.to_position() for pose in trajectory]
+        approach_trajectory = full_trajectory[: len(full_trajectory) // 4][::-1]
 
         msc = MotionStatechart()
 
-        goal_point = trajectory[0].to_position()
+        goal_point = full_trajectory[0]
         goal_point.z = self.robot.base.bodies[0].global_pose.z
         main_axis = self.robot.base.main_axis
         pointing_axis = Vector3(
@@ -133,23 +140,20 @@ class ContainerCanPerform(CanPerform):
             goal_point=goal_point,
             threshold=0.2,
         )
-        msc.add_node(point)
 
-        approach_sequence = self._build_cartesian_waypoint_sequence(
-            approach_trajectory,
-            root,
-            gripper.tool_frame,
-            name_prefix="approach_waypoint",
-            sequence_name="approach_trajectory_sequence",
+        approach_sequence = CartesianPositionTrajectory(
+            name="approach_trajectory",
+            root_link=root,
+            tip_link=gripper.tool_frame,
+            goal_points=approach_trajectory,
         )
-        msc.add_node(approach_sequence)
 
-        full_sequence = self._build_cartesian_waypoint_sequence(
-            trajectory,
-            root,
-            gripper.tool_frame,
+        full_sequence = CartesianPositionTrajectory(
+            name="full_trajectory",
+            root_link=root,
+            tip_link=gripper.tool_frame,
+            goal_points=full_trajectory,
         )
-        msc.add_node(full_sequence)
 
         keep_relation = CartesianPose(
             name="hold handle",
@@ -159,15 +163,14 @@ class ContainerCanPerform(CanPerform):
                 reference_frame=gripper.tool_frame, child_frame=gripper.tool_frame
             ),
         )
-        msc.add_node(keep_relation)
 
-        approach_sequence.start_condition = point.observation_variable
-        full_sequence.start_condition = approach_sequence.observation_variable
-        keep_relation.start_condition = approach_sequence.observation_variable
-        approach_sequence.end_condition = approach_sequence.observation_variable
-        point.end_condition = point.observation_variable
+        msc.add_node(
+            motion := Sequence(
+                [point, approach_sequence, Parallel([keep_relation, full_sequence])]
+            )
+        )
 
-        self._add_motion_termination_nodes(msc, full_sequence, self.robot)
+        self._add_motion_termination_nodes(msc, motion, self.robot)
 
         return msc
 
