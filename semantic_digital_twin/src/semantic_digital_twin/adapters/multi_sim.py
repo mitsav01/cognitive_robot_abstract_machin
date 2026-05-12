@@ -1334,6 +1334,8 @@ class MultiSimBuilder(ABC):
     _ignore_connection_type = (FixedConnection, OmniDrive, DifferentialDrive)
     """
     A list of connection types to ignore when building connections in the simulator.
+    FixedConnection is ignored because in MuJoCo, all bodies that are not connected by a joint are implicitly fixed to the parent body.
+    OmniDrive and DifferentialDrive are ignored because in MuJoCo, those are controlled by the degree of freedom of the freejoints.
     """
 
     def build_world(self, world: World, file_path: str):
