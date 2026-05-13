@@ -41,8 +41,8 @@ dev = [
 
 [project.urls]
 Homepage = "https://code-iai.github.io/krrood/intro.html"
-Repository = "https://github.com/code-iai/krrood"
-Issues = "https://github.com/code-iai/krrood/issues"
+"Source" = "https://github.com/cram2/cognitive_robot_abstract_machine"
+"Bug Tracker" = "https://github.com/cram2/cognitive_robot_abstract_machine/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
