@@ -43,6 +43,7 @@ from krrood.entity_query_language.factories import (
     sum,
     average,
     set_of,
+    case_when,
 )
 from krrood.ormatic.data_access_objects.helper import to_dao
 from krrood.ormatic.eql_interface import eql_to_sql
@@ -1210,3 +1211,61 @@ def test_cte_from_eql(session, database):
         'JOIN large_bodies ON large_bodies.database_id = "ContainerDAO".database_id'
     )
     assert str(outer_translator.sql_query) == expected_sql
+
+
+def test_case_when_with_min(session):
+    """
+    Verify that min(case_when(...)) translates to SQL MIN(CASE WHEN ... THEN ... END).
+    Simulates: MIN(CASE WHEN d.polymorphic_type='PickUpActionDAO' THEN id END)
+    from the big plan query.
+    """
+    action = variable(MoveAction, domain=None)
+
+    query = an(set_of(
+        min(case_when(action.polymorphic_type == 'PickUpActionDAO', action.database_id))
+    ))
+
+    translator = eql_to_sql(query, session)
+    expected_sql = (
+        'SELECT min(CASE WHEN ("SymbolDAO".polymorphic_type = :polymorphic_type_1) '
+        'THEN "MoveActionDAO".database_id END) AS min_1 \n'
+        'FROM "SymbolDAO" JOIN "WorldEntityDAO" ON "WorldEntityDAO".database_id = '
+        '"SymbolDAO".database_id JOIN "MoveActionDAO" ON '
+        '"MoveActionDAO".database_id = "WorldEntityDAO".database_id'
+    )
+    assert str(translator.sql_query) == expected_sql
+
+def test_case_when_direct_in_set_of(session):
+    """Verify case_when directly in set_of without aggregator."""
+    action = variable(MoveAction, domain=None)
+    query = an(set_of(
+        case_when(action.polymorphic_type == 'PickUpActionDAO', action.robot_x)
+    ))
+    translator = eql_to_sql(query, session)
+
+    expected_sql = (
+        'SELECT CASE WHEN ("SymbolDAO".polymorphic_type = :polymorphic_type_1) '
+        'THEN "MoveActionDAO".robot_x END AS anon_1 \n'
+        'FROM "SymbolDAO" JOIN "WorldEntityDAO" ON "WorldEntityDAO".database_id = '
+        '"SymbolDAO".database_id JOIN "MoveActionDAO" ON '
+        '"MoveActionDAO".database_id = "WorldEntityDAO".database_id'
+    )
+    assert str(translator.sql_query) == expected_sql
+
+
+def test_case_when_with_max(session):
+    """Verify max(case_when(...)) translates correctly."""
+    action = variable(MoveAction, domain=None)
+    query = an(set_of(
+        max(case_when(action.polymorphic_type == 'PlaceActionDAO', action.database_id))
+    ))
+    translator = eql_to_sql(query, session)
+
+    expected_sql = (
+        'SELECT max(CASE WHEN ("SymbolDAO".polymorphic_type = :polymorphic_type_1) '
+        'THEN "MoveActionDAO".database_id END) AS max_1 \n'
+        'FROM "SymbolDAO" JOIN "WorldEntityDAO" ON "WorldEntityDAO".database_id = '
+        '"SymbolDAO".database_id JOIN "MoveActionDAO" ON '
+        '"MoveActionDAO".database_id = "WorldEntityDAO".database_id'
+    )
+    assert str(translator.sql_query) == expected_sql
