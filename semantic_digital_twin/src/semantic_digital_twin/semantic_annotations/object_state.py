@@ -16,6 +16,7 @@ from typing import Optional
 
 from semantic_digital_twin.world_description.world_entity import SemanticAnnotation
 
+
 class FillState(str, Enum):
     EMPTY = "empty"
     FILLED = "filled"

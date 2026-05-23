@@ -11,16 +11,18 @@ from typing import Dict, Deque, List, Optional, Tuple
 
 from .object_state import ObjectState, CutState, FillState
 
-
 # ============================================================================
 # Exceptions
 # ============================================================================
 
+
 class StateUnknownError(Exception):
     pass
 
+
 class LowConfidenceError(Exception):
     pass
+
 
 class StaleStateError(Exception):
     pass
@@ -30,6 +32,7 @@ class StaleStateError(Exception):
 # Dynamic State Manager
 # ============================================================================
 
+
 class DynamicStateManager:
     """
     Memory-bounded temporal SDT state manager.
@@ -38,7 +41,7 @@ class DynamicStateManager:
     def __init__(
         self,
         max_history_per_object: int = 200,
-        max_history_seconds: Optional[float] = 300.0
+        max_history_seconds: Optional[float] = 300.0,
     ):
         self.max_history_size = max_history_per_object
         self.max_history_seconds = max_history_seconds
@@ -89,7 +92,12 @@ class DynamicStateManager:
     # Query Interface (Robot API)
     # ------------------------------------------------------------------------
 
-    def is_cut(self, entity_id: str, min_confidence: float = 0.8, max_age_sec: Optional[float] = None) -> bool:
+    def is_cut(
+        self,
+        entity_id: str,
+        min_confidence: float = 0.8,
+        max_age_sec: Optional[float] = None,
+    ) -> bool:
         state = self.get_current_state(entity_id)
         self._validate(state, min_confidence, max_age_sec)
 
@@ -98,7 +106,12 @@ class DynamicStateManager:
 
         return state.cut_state == CutState.CUT
 
-    def is_filled(self, entity_id: str, min_confidence: float = 0.8, max_age_sec: Optional[float] = None) -> bool:
+    def is_filled(
+        self,
+        entity_id: str,
+        min_confidence: float = 0.8,
+        max_age_sec: Optional[float] = None,
+    ) -> bool:
         state = self.get_current_state(entity_id)
         self._validate(state, min_confidence, max_age_sec)
 
@@ -107,7 +120,12 @@ class DynamicStateManager:
 
         return state.fill_state in (FillState.FILLED, FillState.FULL)
 
-    def is_empty(self, entity_id: str, min_confidence: float = 0.8, max_age_sec: Optional[float] = None) -> bool:
+    def is_empty(
+        self,
+        entity_id: str,
+        min_confidence: float = 0.8,
+        max_age_sec: Optional[float] = None,
+    ) -> bool:
         state = self.get_current_state(entity_id)
         self._validate(state, min_confidence, max_age_sec)
 
@@ -120,15 +138,21 @@ class DynamicStateManager:
     # Temporal Reasoning & Transitions
     # ------------------------------------------------------------------------
 
-    def was_cut_at(self, entity_id: str, timestamp: float, min_confidence: float = 0.8) -> bool:
+    def was_cut_at(
+        self, entity_id: str, timestamp: float, min_confidence: float = 0.8
+    ) -> bool:
         state = self.get_state_at(entity_id, timestamp)
         if not state:
-            raise StateUnknownError(f"No historical state available for '{entity_id}' at time {timestamp}")
+            raise StateUnknownError(
+                f"No historical state available for '{entity_id}' at time {timestamp}"
+            )
 
         self._validate(state, min_confidence, max_age_sec=None)
 
         if state.cut_state is None:
-            raise StateUnknownError(f"Cut state for '{entity_id}' at time {timestamp} is unknown.")
+            raise StateUnknownError(
+                f"Cut state for '{entity_id}' at time {timestamp} is unknown."
+            )
 
         return state.cut_state == CutState.CUT
 
@@ -140,8 +164,10 @@ class DynamicStateManager:
             prev_state = history[i - 1]
             curr_state = history[i]
 
-            if (prev_state.cut_state != curr_state.cut_state or
-                prev_state.fill_state != curr_state.fill_state):
+            if (
+                prev_state.cut_state != curr_state.cut_state
+                or prev_state.fill_state != curr_state.fill_state
+            ):
                 transitions.append((prev_state, curr_state))
 
         return transitions
@@ -150,7 +176,9 @@ class DynamicStateManager:
     # Internal Validation & Memory Safety Utilities
     # ------------------------------------------------------------------------
 
-    def _validate(self, state: ObjectState, min_confidence: float, max_age_sec: Optional[float]) -> None:
+    def _validate(
+        self, state: ObjectState, min_confidence: float, max_age_sec: Optional[float]
+    ) -> None:
         if state.confidence < min_confidence:
             raise LowConfidenceError(
                 f"State confidence ({state.confidence}) is below required threshold ({min_confidence})"
@@ -172,15 +200,18 @@ class DynamicStateManager:
 
         while history:
             oldest_state = history[0]
-            if oldest_state.timestamp and (now - oldest_state.timestamp) > self.max_history_seconds:
+            if (
+                oldest_state.timestamp
+                and (now - oldest_state.timestamp) > self.max_history_seconds
+            ):
                 history.popleft()
             else:
                 break
 
     def _is_duplicate(self, a: ObjectState, b: ObjectState) -> bool:
         return (
-            a.cut_state == b.cut_state and
-            a.fill_state == b.fill_state and
-            a.source == b.source and
-            abs((a.confidence or 0) - (b.confidence or 0)) < 1e-3
+            a.cut_state == b.cut_state
+            and a.fill_state == b.fill_state
+            and a.source == b.source
+            and abs((a.confidence or 0) - (b.confidence or 0)) < 1e-3
         )
