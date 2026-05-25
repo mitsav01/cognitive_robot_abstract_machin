@@ -24,6 +24,7 @@ from krrood.entity_query_language.core.mapped_variable import (
     MappedVariable,
 )
 from krrood.entity_query_language.factories import (
+    and_,
     attribute_owner_class,
     contains,
     entity,
@@ -277,7 +278,7 @@ class InferenceExplanation(Symbol):
         return entity(node).where(
             explanation.satisfied_condition_ids != None,
             contains(explanation.satisfied_condition_ids, node_id(node)),
-        )
+        ).distinct()
 
     def get_values_of_variable_nodes_of_given_type(
         self, type_: Type
@@ -304,7 +305,7 @@ class InferenceExplanation(Symbol):
         :return: An entity containing instances that participated in the inference of this instance.
         """
         if node_variable is None:
-            node_variable = self.create_query_node_variable()
+            node_variable = self.create_query_node_variable(self.create_explanation_variable())
         return (
             entity(node_variable)
             .where(
@@ -355,26 +356,28 @@ class InferenceExplanation(Symbol):
         condition_node = self.get_satisfied_condition_expressions_for_the_instance()
         child1 = flat_variable(node_children(condition_node))
         child2 = flat_variable(node_children(condition_node))
-        child1_descendant = self.get_variable_nodes_of_given_type(
-            type_, concatenation(child1, flat_variable(node_descendants(child1)))
-        )
-        child2_descendant = self.get_variable_nodes_of_given_type(
-            type_, concatenation(child2, flat_variable(node_descendants(child2)))
-        )
-        condition_type_filter = HasType(
-            condition_node, (Comparator, InstantiatedVariable)
-        )
+
+        def make_type_checker(child):
+            # Use exists(node, conditions) directly — avoids the _expression_/An-quantifier
+            # problem that arises when passing a built entity to exists().  When .build() is
+            # called on an entity, _expression_ is set to an An quantifier; _update_children_
+            # then passes that An to Exists.left, and An._evaluate__ ignores sources entirely.
+            node = concatenation(child, flat_variable(node_descendants(child)))
+            node_type_ = node_type(node)
+            return exists(node, and_(
+                HasType(node, Selectable),
+                node_type_ != None,
+                is_class(node_type_),
+                issubclass_(node_type_, type_),
+            ))
+
         return (
-            set_of(condition_node, child1, child2)
+            entity(condition_node)
             .where(
-                condition_type_filter,
+                HasType(condition_node, (Comparator, InstantiatedVariable)),
                 node_id(child1) != node_id(child2),
-                exists(child1_descendant, True),
-                exists(child2_descendant, True),
-                # HasType(condition_node.left, Attribute),
-                # HasType(condition_node.right, Attribute),
-                # issubclass_(attribute_owner_class(condition_node.left), type_),
-                # issubclass_(attribute_owner_class(condition_node.right), type_),
+                make_type_checker(child1),
+                make_type_checker(child2),
             )
             .distinct()
         )
@@ -398,17 +401,25 @@ class InferenceExplanation(Symbol):
         from krrood.entity_query_language.core.variable import InstantiatedVariable
 
         condition_node = self.get_satisfied_condition_expressions_for_the_instance()
-        descendant_a = self.get_variable_nodes_of_given_type(
-            type_a, flat_variable(node_descendants(condition_node))
-        )
-        descendant_b = self.get_variable_nodes_of_given_type(
-            type_b, flat_variable(node_descendants(condition_node))
-        )
+        desc_a = flat_variable(node_descendants(condition_node))
+        desc_b = flat_variable(node_descendants(condition_node))
+
+        def make_type_exists(node_var, type_):
+            node_type_ = node_type(node_var)
+            return exists(node_var, and_(
+                HasType(node_var, Selectable),
+                node_type_ != None,
+                is_class(node_type_),
+                issubclass_(node_type_, type_),
+            ))
+
         return (
             entity(condition_node)
             .where(
                 HasType(condition_node, (Comparator, InstantiatedVariable)),
-                node_id(descendant_a) != node_id(descendant_b),
+                node_id(desc_a) != node_id(desc_b),
+                make_type_exists(desc_a, type_a),
+                make_type_exists(desc_b, type_b),
             )
             .distinct(node_id(condition_node))
         )
