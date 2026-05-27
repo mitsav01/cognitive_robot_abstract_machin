@@ -138,8 +138,8 @@ def test_translate_free_space_to_where_condition(wall_door_handle_world):
     where_condition = translate_free_space_to_where_condition(
         gcs.free_space_event,
         query.expression,
-        x_variable_name="MoveToReach.target_pose_robot.x",
-        y_variable_name="MoveToReach.target_pose_robot.y",
+        x_variable_name="MoveToReach.target_pose_offset_robot.x",
+        y_variable_name="MoveToReach.target_pose_offset_robot.y",
     )
 
     query = query.where(where_condition)
@@ -149,8 +149,8 @@ def test_translate_free_space_to_where_condition(wall_door_handle_world):
     result_to_compare = (
         parameters.truncation_assignments_from_where_conditions.update_variables(
             {
-                Continuous("MoveToReach.target_pose_robot.x"): SpatialVariables.x.value,
-                Continuous("MoveToReach.target_pose_robot.y"): SpatialVariables.y.value,
+                Continuous("MoveToReach.target_pose_offset_robot.x"): SpatialVariables.x.value,
+                Continuous("MoveToReach.target_pose_offset_robot.y"): SpatialVariables.y.value,
             }
         )
     )
