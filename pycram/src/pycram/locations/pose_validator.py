@@ -12,7 +12,8 @@ from giskardpy.motion_statechart.tasks.cartesian_tasks import CartesianPose
 from giskardpy.qp.qp_controller_config import QPControllerConfig
 from pycram.alternative_motion_mapping import AlternativeMotion
 from pycram.datastructures.dataclasses import Context
-from pycram.datastructures.enums import Arms
+from pycram.datastructures.enums import Arms, ApproachDirection, VerticalAlignment
+from pycram.datastructures.grasp import GraspDescription
 from pycram.locations.base import PoseValidator
 from pycram.plans.plan import Plan
 from pycram.plans.plan_node import PlanNode
@@ -20,6 +21,8 @@ from pycram.robot_plans import MoveToolCenterPointMotion
 from pycram.view_manager import ViewManager
 from semantic_digital_twin.datastructures.prefixed_name import PrefixedName
 from semantic_digital_twin.robots.robot_part_mixins import HasMobileBase
+from semantic_digital_twin.robots.robot_parts import EndEffector
+from semantic_digital_twin.spatial_types import HomogeneousTransformationMatrix
 from semantic_digital_twin.spatial_types.spatial_types import Pose
 from semantic_digital_twin.world_description.connections import (
     FixedConnection,
@@ -111,6 +114,21 @@ class ReachabilityValidator(PoseValidator):
     Link that should be moved to the given pose
     """
 
+    grasp_description: GraspDescription = field(default=None)
+    """
+    The grasp description that should be used for validation
+    """
+
+    def __post_init__(self):
+        [end_effector] = [
+            ee
+            for ee in self.world.get_semantic_annotations_by_type(EndEffector)
+            if ee.tool_frame == self.tip_link
+        ]
+        self.grasp_description = self.grasp_description or GraspDescription(
+            ApproachDirection.FRONT, VerticalAlignment.NoAlignment, end_effector
+        )
+
     def __call__(self) -> bool:
         return ReachabilitySequenceValidator(
             pose_sequence=[self.pose],
@@ -137,6 +155,21 @@ class ReachabilitySequenceValidator(PoseValidator):
     Link of the robot which should be used for reachability checking
     """
 
+    grasp_description: GraspDescription = field(default=None)
+    """
+    The grasp description that should be used for validation
+    """
+
+    def __post_init__(self):
+        [end_effector] = [
+            ee
+            for ee in self.world.get_semantic_annotations_by_type(EndEffector)
+            if ee.tool_frame == self.tip_link
+        ]
+        self.grasp_description = self.grasp_description or GraspDescription(
+            ApproachDirection.FRONT, VerticalAlignment.NoAlignment, end_effector
+        )
+
     def create_msc(self):
         alternative_motion = AlternativeMotion.check_for_alternative(
             self.robot, MoveToolCenterPointMotion
@@ -151,7 +184,18 @@ class ReachabilitySequenceValidator(PoseValidator):
                     correct_arm = arm
             sequence = []
             for pose in self.pose_sequence:
-                motion = alternative_motion(pose, correct_arm, True)
+
+                end_effector_pose_orientation = (
+                    self.grasp_description.grasp_orientation()
+                )
+
+                pose = self.grasp_description._pose_sequence(pose)[1]
+
+                motion = alternative_motion(
+                    pose,
+                    correct_arm,
+                    True,
+                )
                 node = PlanNode()
                 # Imagine a plan for the motion node
                 plan = Plan(Context(self.world, self.robot))
@@ -169,9 +213,15 @@ class ReachabilitySequenceValidator(PoseValidator):
                 )
                 else self.world.root
             )
+
+            rotated_sequence = [
+                self.grasp_description._pose_sequence(pose)[1]
+                for pose in self.pose_sequence
+            ]
+
             sequence = [
                 CartesianPose(root_link=root, tip_link=self.tip_link, goal_pose=pose)
-                for pose in self.pose_sequence
+                for pose in rotated_sequence
             ]
 
         msc = MotionStatechart()
