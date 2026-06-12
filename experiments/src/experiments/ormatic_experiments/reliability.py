@@ -120,7 +120,7 @@ class ORMaticReliabilityExperimentResult(ExperimentResult):
     """Seconds to build the PR2+apartment world."""
     plan_execution_duration: float
     """Seconds to execute the plan under simulated_robot."""
-    to_dao_duration: float
+    to_data_access_object_duration: float
     """Seconds for to_dao() to serialise the plan to a DAO."""
     writing_to_database_duration: float
     """Combined seconds for session.add(dao) + session.commit()."""
@@ -203,7 +203,7 @@ def reliability_experiment(
         plan_size=plan_size,
         world_building_duration=round(world_building_duration, 3),
         plan_execution_duration=round(plan_execution_duration, 3),
-        to_dao_duration=round(to_dao_duration, 3),
+        to_data_access_object_duration=round(to_dao_duration, 3),
         writing_to_database_duration=round(writing_to_database_duration, 3),
         reading_from_database_duration=round(reading_from_database_duration, 3),
         reconstruction_duration=round(reconstruction_duration, 3),
@@ -270,7 +270,7 @@ def plot_reliability(
     """
     phases = [
         ("plan_execution_duration", "Plan Execution"),
-        ("to_dao_duration", "to_dao()"),
+        ("to_data_access_object_duration", "to_dao()"),
         ("writing_to_database_duration", "Write to DB"),
         ("reading_from_database_duration", "Read from DB"),
         ("reconstruction_duration", "from_dao()"),
@@ -306,7 +306,7 @@ def main():
             1,
         ]
     ):
-        aggregate, raw = run_reliability_experiment(plan_size, iterations=10)
+        aggregate, raw = run_reliability_experiment(plan_size, iterations=1)
         aggregate_results.append(aggregate)
         all_raw.extend(raw)
 
