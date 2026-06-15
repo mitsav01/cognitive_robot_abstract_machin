@@ -54,7 +54,6 @@ experiments           = { workspace = true }
 package-mode = false
 
 [tool.poetry.dependencies]
-pytest = ">=7.0.0,<8.0.0"
 coraplex = { path = "coraplex", develop = true }
 giskardpy = { path = "giskardpy", develop = true }
 semantic_digital_twin = { path = "semantic_digital_twin", develop = true }

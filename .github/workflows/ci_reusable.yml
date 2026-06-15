@@ -33,7 +33,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0 libegl1
           poetry install
-          pip install "pytest>=7.0.0,<8.0.0" "pytest-asyncio>=0.18.3,<0.21.0"
           poetry show --no-ansi --top-level
           python -c "import sys; print(sys.executable)"
 
