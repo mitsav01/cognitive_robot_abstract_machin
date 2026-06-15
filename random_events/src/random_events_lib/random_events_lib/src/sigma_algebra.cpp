@@ -600,43 +600,50 @@ AbstractCompositeSetPtr_t AbstractCompositeSet::difference_with(
 }
 
 AbstractCompositeSetPtr_t AbstractCompositeSet::subtract_simple_set_disjoint(
-    const AbstractSimpleSetPtr_t &B) {
+    const AbstractSimpleSetPtr_t &obstacle) {
     // Precondition: this is a disjoint union.
-    // Subtracts B without calling make_disjoint() — correctness follows from:
-    //   (a_i - B) ∩ (a_j - B) ⊆ a_i ∩ a_j = ∅  when the a_i are disjoint.
-    if (simple_sets->empty() || B->is_empty()) return shared_from_this();
+    // Correctness: (piece_i - obstacle) ∩ (piece_j - obstacle) ⊆ piece_i ∩ piece_j = ∅
+    // when the pieces are disjoint, so the result is disjoint without calling make_disjoint().
+    if (simple_sets->empty() || obstacle->is_empty()) return shared_from_this();
 
-    std::vector<AbstractSimpleSetPtr_t> scratch;
-    scratch.reserve(simple_sets->size() * 6);  // at most 6 sub-pieces per box in 3D
+    // Each 3-D box can split into at most 6 sub-pieces when one box is subtracted from it.
+    std::vector<AbstractSimpleSetPtr_t> result_pieces;
+    result_pieces.reserve(simple_sets->size() * 6);
 
-    for (auto const &a : *simple_sets) {
-        auto I = a->intersection_with(B);
-        if (I->is_empty()) {
-            scratch.push_back(a);  // fast path: no overlap
+    for (auto const &current_piece : *simple_sets) {
+        auto overlap = current_piece->intersection_with(obstacle);
+        if (overlap->is_empty()) {
+            // No overlap with the obstacle: keep the current piece unchanged.
+            result_pieces.push_back(current_piece);
         } else {
-            auto diff = a->difference_with(B);
-            for (auto const &p : *diff) scratch.push_back(p);
+            // Split the current piece around the obstacle and keep all non-overlapping sub-pieces.
+            auto difference_pieces = current_piece->difference_with(obstacle);
+            for (auto const &difference_piece : *difference_pieces) {
+                result_pieces.push_back(difference_piece);
+            }
         }
     }
 
     auto result = make_new_empty();
-    if (!scratch.empty()) result->simple_sets->insert(scratch.begin(), scratch.end());
+    if (!result_pieces.empty()) {
+        result->simple_sets->insert(result_pieces.begin(), result_pieces.end());
+    }
     return result;
 }
 
 AbstractCompositeSetPtr_t AbstractCompositeSet::subtract_disjoint(
-    const AbstractCompositeSetPtr_t &other) {
-    // Equivalent to (this & ~other) but stays bounded in the same space as this.
-    // Never calls make_disjoint() — disjointness is maintained at each step.
+    const AbstractCompositeSetPtr_t &obstacle_set) {
+    // Equivalent to (this & ~obstacle_set) but stays bounded in the same space as this
+    // composite set.  Never calls make_disjoint() — disjointness is maintained at each step.
     if (simple_sets->empty()) return make_new_empty();
-    if (other->is_empty()) return shared_from_this();
+    if (obstacle_set->is_empty()) return shared_from_this();
 
-    auto result = shared_from_this();
-    for (auto const &B : *other->simple_sets) {
-        result = result->subtract_simple_set_disjoint(B);
-        if (result->is_empty()) break;
+    auto remaining = shared_from_this();
+    for (auto const &obstacle_piece : *obstacle_set->simple_sets) {
+        remaining = remaining->subtract_simple_set_disjoint(obstacle_piece);
+        if (remaining->is_empty()) break;
     }
-    return result;
+    return remaining;
 }
 
 bool AbstractCompositeSet::contains(const AbstractCompositeSetPtr_t &other) {

@@ -445,8 +445,8 @@ class GraphOfConvexSets:
             search_space_event = search_space_event.marginal(SpatialVariables.xy)
 
         free_space = search_space_event
-        for bb in bounding_boxes:
-            obstacle = bb.simple_event.as_composite_set()
+        for bounding_box in bounding_boxes:
+            obstacle = bounding_box.simple_event.as_composite_set()
             if not keep_z:
                 obstacle = obstacle.marginal(SpatialVariables.xy)
             obstacle_in_search = obstacle & search_space_event
@@ -479,21 +479,21 @@ class GraphOfConvexSets:
         :return: The connectivity graph. If no obstacles are found, an empty graph is returned.
         """
 
-        def bloat_obstacle(bb):
-            return bb.bloat(bloat_obstacles, bloat_obstacles, 0.01)
+        def bloat_obstacle(bounding_box):
+            return bounding_box.bloat(bloat_obstacles, bloat_obstacles, 0.01)
 
-        def bloat_wall(bb):
-            if bb.width > bb.depth:
-                return bb.bloat(bloat_walls, 0, 0.01)
+        def bloat_wall(bounding_box):
+            if bounding_box.width > bounding_box.depth:
+                return bounding_box.bloat(bloat_walls, 0, 0.01)
             else:
-                return bb.bloat(0, bloat_walls, 0.01)
+                return bounding_box.bloat(0, bloat_walls, 0.01)
 
         world_root = search_space.reference_frame
 
         bloated_obstacles: BoundingBoxCollection = BoundingBoxCollection(
             [
-                bloat_obstacle(bb)
-                for bb in semantic_obstacle_annotation.as_bounding_box_collection_at_origin(
+                bloat_obstacle(bounding_box)
+                for bounding_box in semantic_obstacle_annotation.as_bounding_box_collection_at_origin(
                     HomogeneousTransformationMatrix(reference_frame=world_root)
                 )
             ],
@@ -503,8 +503,8 @@ class GraphOfConvexSets:
         if semantic_wall_annotation is not None:
             bloated_walls: BoundingBoxCollection = BoundingBoxCollection(
                 [
-                    bloat_wall(bb)
-                    for bb in semantic_wall_annotation.as_bounding_box_collection_at_origin(
+                    bloat_wall(bounding_box)
+                    for bounding_box in semantic_wall_annotation.as_bounding_box_collection_at_origin(
                         HomogeneousTransformationMatrix(reference_frame=world_root)
                     )
                 ],
@@ -526,8 +526,8 @@ class GraphOfConvexSets:
             search_space=search_space, world=semantic_obstacle_annotation._world
         )
         [
-            result.add_node(bb)
-            for bb in BoundingBoxCollection.from_event(
+            result.add_node(bounding_box)
+            for bounding_box in BoundingBoxCollection.from_event(
                 reference_frame=search_space.reference_frame,
                 event=free_space,
             )
@@ -624,21 +624,21 @@ class GraphOfConvexSets:
         """
 
         # create search space for calculations
-        def bloat_obstacle(bb):
-            return bb.bloat(bloat_obstacles, bloat_obstacles, 0.01)
+        def bloat_obstacle(bounding_box):
+            return bounding_box.bloat(bloat_obstacles, bloat_obstacles, 0.01)
 
-        def bloat_wall(bb):
-            if bb.width > bb.depth:
-                return bb.bloat(bloat_walls, 0, 0.01)
+        def bloat_wall(bounding_box):
+            if bounding_box.width > bounding_box.depth:
+                return bounding_box.bloat(bloat_walls, 0, 0.01)
             else:
-                return bb.bloat(0, bloat_walls, 0.01)
+                return bounding_box.bloat(0, bloat_walls, 0.01)
 
         world_root = search_space.reference_frame
 
         nav_obstacles: BoundingBoxCollection = BoundingBoxCollection(
             [
-                bloat_obstacle(bb)
-                for bb in semantic_obstacle_annotation.as_bounding_box_collection_at_origin(
+                bloat_obstacle(bounding_box)
+                for bounding_box in semantic_obstacle_annotation.as_bounding_box_collection_at_origin(
                     HomogeneousTransformationMatrix(reference_frame=world_root)
                 )
             ],
@@ -648,8 +648,8 @@ class GraphOfConvexSets:
         if semantic_wall_annotation is not None:
             nav_walls: BoundingBoxCollection = BoundingBoxCollection(
                 [
-                    bloat_wall(bb)
-                    for bb in semantic_wall_annotation.as_bounding_box_collection_at_origin(
+                    bloat_wall(bounding_box)
+                    for bounding_box in semantic_wall_annotation.as_bounding_box_collection_at_origin(
                         HomogeneousTransformationMatrix(reference_frame=world_root)
                     )
                 ],
@@ -662,11 +662,11 @@ class GraphOfConvexSets:
                 world=search_space.reference_frame._world, search_space=search_space
             )
 
-        # remove the z axis
-        og_search_event = search_space.event
-        search_event = og_search_event.marginal(SpatialVariables.xy)
+        # Remove the z-axis so free-space is computed on the 2-D floor plane.
+        full_search_event = search_space.event
+        search_event = full_search_event.marginal(SpatialVariables.xy)
 
-        free_space = cls.free_space_from_bounding_boxes(nav_obstacles, og_search_event, keep_z=False)
+        free_space = cls.free_space_from_bounding_boxes(nav_obstacles, full_search_event, keep_z=False)
 
         SimpleEvent.from_data({SpatialVariables.z.value: reals()})
         # create floor level
@@ -676,7 +676,7 @@ class GraphOfConvexSets:
         z_event.fill_missing_variables(SpatialVariables.xy)
         free_space.fill_missing_variables(SortedSet([SpatialVariables.z.value]))
         free_space &= z_event
-        free_space &= og_search_event
+        free_space &= full_search_event
 
         # create a connectivity graph from the free space and calculate the edges
         result = cls(
@@ -686,7 +686,7 @@ class GraphOfConvexSets:
         free_space_boxes = BoundingBoxCollection.from_event(
             search_space.reference_frame, free_space
         )
-        [result.add_node(bb) for bb in free_space_boxes]
+        [result.add_node(bounding_box) for bounding_box in free_space_boxes]
         result.calculate_connectivity(tolerance)
 
         return result

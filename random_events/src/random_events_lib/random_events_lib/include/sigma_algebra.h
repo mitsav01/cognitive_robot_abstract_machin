@@ -268,33 +268,39 @@ public:
     AbstractCompositeSetPtr_t difference_with(const AbstractCompositeSetPtr_t &other);
 
     /**
-     * Subtract a single simple set from this, assuming this is already a disjoint union.
+     * Subtract a single simple set from this composite set, assuming this composite set is
+     * already a disjoint union.
      *
-     * Unlike difference_with(AbstractSimpleSetPtr_t), this does NOT call make_disjoint()
-     * because the disjointness invariant is preserved: pieces (a_i - B) for disjoint a_i
-     * are disjoint since a_i - B ⊆ a_i and a_i ∩ a_j = ∅ implies (a_i - B) ∩ (a_j - B) = ∅.
+     * Unlike difference_with(AbstractSimpleSetPtr_t), this method does NOT call make_disjoint()
+     * because the disjointness invariant is preserved automatically: for disjoint pieces
+     * a_i and a_j, subtracting the same simple set from each piece gives
+     *   (a_i - obstacle) ∩ (a_j - obstacle) ⊆ a_i ∩ a_j = ∅.
      *
-     * @param B The simple set to subtract. Must be a single simple set.
-     * @return The difference as disjoint composite set (no make_disjoint() overhead).
+     * Precondition: this composite set must be a disjoint union.
+     *
+     * @param obstacle The simple set to subtract from each piece of this composite set.
+     * @return The difference as a disjoint composite set (no make_disjoint() overhead).
      */
-    AbstractCompositeSetPtr_t subtract_simple_set_disjoint(const AbstractSimpleSetPtr_t &B);
+    AbstractCompositeSetPtr_t subtract_simple_set_disjoint(const AbstractSimpleSetPtr_t &obstacle);
 
     /**
      * Subtract a composite set from this via incremental bounded subtraction.
      *
-     * Calls subtract_simple_set_disjoint for each piece of other in sequence.
-     * This is the efficient alternative to (this & ~other): it stays bounded in the
-     * same space as this, avoids computing complement() in the full ambient space,
-     * and never calls make_disjoint().
+     * Iterates over each simple-set piece of the obstacle and calls
+     * subtract_simple_set_disjoint in sequence.  This is the efficient alternative to
+     * (this & ~other): it stays bounded inside the same space as this composite set,
+     * avoids computing complement() across the full ambient space, and never calls
+     * make_disjoint().
      *
-     * Precondition: this must be a disjoint union (invariant maintained throughout).
+     * Precondition: this composite set must be a disjoint union (the invariant is
+     * maintained at every step of the iteration).
      *
      * Mathematical identity:  A - B₁ - B₂ - … = A ∩ ~(B₁ ∪ B₂ ∪ …)
      *
-     * @param other The composite set to subtract.
-     * @return The difference as disjoint composite set (no make_disjoint() overhead).
+     * @param obstacle The composite set to subtract.
+     * @return The difference as a disjoint composite set (no make_disjoint() overhead).
      */
-    AbstractCompositeSetPtr_t subtract_disjoint(const AbstractCompositeSetPtr_t &other);
+    AbstractCompositeSetPtr_t subtract_disjoint(const AbstractCompositeSetPtr_t &obstacle);
 
     bool contains(const AbstractCompositeSetPtr_t &other);
 
