@@ -371,12 +371,13 @@ class Stretch(AbstractRobot, HasMobileBase[StretchMobileBase]):
         )
 
     def _setup_velocity_limits(self):
-        # Default: 0.1 rad/s — conservative limit for joints without specific tuning
         vel_limits = defaultdict(lambda: 0.1)
-        # Gripper fingers: very slow to avoid crushing objects
-        vel_limits[self._world.get_connection_by_name("joint_gripper_finger_left")] = 0.01
-        vel_limits[self._world.get_connection_by_name("joint_gripper_finger_right")] = 0.01
-        # Wrist and head: empirically tuned for smooth real-hardware motion
+        vel_limits[self._world.get_connection_by_name("joint_gripper_finger_left")] = (
+            0.01
+        )
+        vel_limits[self._world.get_connection_by_name("joint_gripper_finger_right")] = (
+            0.01
+        )
         vel_limits[self._world.get_connection_by_name("joint_wrist_yaw")] = 0.4
         vel_limits[self._world.get_connection_by_name("joint_head_tilt")] = 0.5
         vel_limits[self._world.get_connection_by_name("joint_head_pan")] = 0.5

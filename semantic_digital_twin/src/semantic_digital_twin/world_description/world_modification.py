@@ -478,17 +478,6 @@ class AttributeUpdateModification(WorldModification, SubclassJSONSerializer):
                 setattr(entity, diff.attribute_name, obj)
         world._model_manager.current_model_modification_block.append(self)
 
-    def update_world_references_in_updated_kwargs(self, world: World) -> List[JSONAttributeDiff]:
-        """
-        Resolves world entity references in the updated kwargs against the given world.
-
-        :param world: World to resolve entity references against
-        :return: Updated kwargs with world entity references resolved
-        """
-        tracker = WorldEntityWithIDKwargsTracker.from_world(world)
-        kwargs = tracker.create_kwargs()
-        return from_json(to_json(self.updated_kwargs_json_list), **kwargs)
-
     def _apply_to_list(
         self, current_value: List[Any], diff: JSONAttributeDiff, **kwargs
     ):
