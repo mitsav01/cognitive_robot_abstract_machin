@@ -107,8 +107,10 @@ class ReachAction(ActionDescription):
         return and_(
             AreReachableBy(
                 context=Context(
-                    test_world,
-                    test_world.get_semantic_annotations_by_type(type(context.robot))[0],
+                    world=test_world,
+                    robot=test_world.get_semantic_annotations_by_type(
+                        type(context.robot)
+                    )[0],
                     alternative_motion_mappings=context.alternative_motion_mappings,
                 ),
                 pose_sequence=grasp_pose_sequence,
@@ -213,8 +215,10 @@ class PickUpAction(ActionDescription):
             GripperIsFree(end_effector),
             AreReachableBy(
                 context=Context(
-                    test_world,
-                    test_world.get_semantic_annotations_by_type(type(context.robot))[0],
+                    world=test_world,
+                    robot=test_world.get_semantic_annotations_by_type(
+                        type(context.robot)
+                    )[0],
                     alternative_motion_mappings=context.alternative_motion_mappings,
                 ),
                 pose_sequence=grasp_pose_sequence,

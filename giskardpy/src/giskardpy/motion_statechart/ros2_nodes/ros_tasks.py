@@ -103,18 +103,13 @@ class ActionServerTask(
         logger.info(f"Action server {self.action_topic} done.")
 
 
-_NavGoal = getattr(NavigateToPose, "Goal", object)
-_NavResult = getattr(NavigateToPose, "Result", object)
-_NavFeedback = getattr(NavigateToPose, "Feedback", object)
-
-
 @dataclass(eq=False, repr=False)
 class NavigateActionServerTask(
     ActionServerTask[
         NavigateToPose,
-        _NavGoal,
-        _NavResult,
-        _NavFeedback,
+        NavigateToPose.Goal,
+        NavigateToPose.Result,
+        NavigateToPose.Feedback,
     ]
 ):
     """

@@ -89,6 +89,13 @@ class StretchMoveReal(MoveMotion, AlternativeMotion[Stretch]):
         world_T_target = self.world.transform(self.target, self.world.root)
         world_T_target.z = 0
         return DifferentialDriveBaseGoal(goal_pose=world_T_target, threshold=0.1)
+        # Commented out for now since we use the giskard goal which also works for smaller distances
+        # return NavigateActionServerTask(
+        #     target_pose=self.target,
+        #     base_link=self.robot.root,
+        #     action_topic="/navigate_to_pose",
+        #     message_type=NavigateToPose,
+        # )
 
 
 class StretchClose(ClosingMotion, AlternativeMotion[Stretch]):

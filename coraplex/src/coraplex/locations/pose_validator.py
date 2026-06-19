@@ -16,6 +16,7 @@ from coraplex.alternative_motion_mapping import AlternativeMotion
 from coraplex.datastructures.dataclasses import Context
 from coraplex.datastructures.enums import Arms, ApproachDirection, VerticalAlignment
 from coraplex.datastructures.grasp import GraspDescription
+from coraplex.exceptions import TipLinkDoesNotMatchAnyArm
 from coraplex.locations.base import PoseValidator
 from coraplex.plans.plan import Plan
 from coraplex.plans.plan_node import PlanNode
@@ -183,9 +184,7 @@ class AreReachableBy(PoseValidator):
                 ):
                     correct_arm = arm
             if correct_arm is None:
-                raise ValueError(
-                    f"tip_link {self.tip_link} does not match any arm of {self.robot}"
-                )
+                raise TipLinkDoesNotMatchAnyArm(self.tip_link, self.robot)
             sequence = []
             for pose in self.pose_sequence:
 
