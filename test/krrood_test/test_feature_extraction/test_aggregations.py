@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from typing import Self
 
 import pytest
 from typing_extensions import List
 
+from krrood.entity_query_language.factories import variable
 from krrood.ormatic.data_access_objects.helper import to_dao
 from krrood.parametrization.feature_extraction.aggregations import (
     AggregationStatistic,
@@ -117,7 +119,87 @@ def test_only_marked_methods_are_statistics():
     owner = Owner(items=[SceneObject(type=SceneObjectType.TABLE)])
     instance = PartiallyMarkedAggregations(instance=owner, field_name="items")
     statistic_names = {function.__name__ for function in instance.aggregation_features}
+    print(PartiallyMarkedAggregations.aggregation_registry)
     assert statistic_names == {"marked_statistic"}
+
+
+def test_registry_is_isolated_between_unrelated_subclasses():
+    @dataclass
+    class OwnerA:
+        items: List[SceneObject]
+
+    @dataclass
+    class OwnerB:
+        items: List[SceneObject]
+
+    @dataclass
+    class AggregationsA(AggregationStatistic[OwnerA]):
+        @aggregation_statistic("items")
+        def count_a(self) -> int:
+            return len(self.instance.items)
+
+    @dataclass
+    class AggregationsB(AggregationStatistic[OwnerB]):
+        @aggregation_statistic("items")
+        def count_b(self) -> int:
+            return len(self.instance.items)
+
+    owner_a = OwnerA(items=[SceneObject(type=SceneObjectType.TABLE)])
+    owner_b = OwnerB(items=[SceneObject(type=SceneObjectType.CHAIR)])
+    instance_a = AggregationsA(instance=owner_a, field_name="items")
+    instance_b = AggregationsB(instance=owner_b, field_name="items")
+
+    assert {f.__name__ for f in instance_a.aggregation_features} == {"count_a"}
+    assert {f.__name__ for f in instance_b.aggregation_features} == {"count_b"}
+
+
+def test_inherited_statistics_are_visible_in_subclass():
+    @dataclass
+    class Owner:
+        items: List[SceneObject]
+
+    @dataclass
+    class BaseAggregations(AggregationStatistic[Owner]):
+        @aggregation_statistic("items")
+        def base_stat(self) -> int:
+            return len(self.instance.items)
+
+    @dataclass
+    class DerivedAggregations(BaseAggregations):
+        pass
+
+    instance = DerivedAggregations(instance=Owner(items=[]), field_name="items")
+    assert {f.__name__ for f in instance.aggregation_features} == {"base_stat"}
+
+
+def test_own_registry_contains_only_directly_defined_methods():
+    @dataclass
+    class Owner:
+        items: List[SceneObject]
+
+    @dataclass
+    class BaseAggregations(AggregationStatistic[Owner]):
+        @aggregation_statistic("items")
+        def base_stat(self) -> int:
+            return len(self.instance.items)
+
+    @dataclass
+    class DerivedAggregations(BaseAggregations):
+        @aggregation_statistic("items")
+        def derived_stat(self) -> int:
+            return 0
+
+    own_names = {
+        f.__name__
+        for f in DerivedAggregations.__dict__["aggregation_registry"].get("items", [])
+    }
+    assert own_names == {"derived_stat"}
+
+    instance = DerivedAggregations(instance=Owner(items=[]), field_name="items")
+    assert {f.__name__ for f in instance.aggregation_features} == {
+        "base_stat",
+        "derived_stat",
+    }
 
 
 def test_aggregation_class_discovered_for_concrete_subclasses():
@@ -134,5 +216,3 @@ def test_feature_extraction_over_empty_exchangeable_part_does_not_raise():
     extractor = FeatureExtractor.from_instances([to_dao(room)])
     assert extractor is not None
     assert all(not isinstance(feature, Call) for feature in extractor.features)
-
-
