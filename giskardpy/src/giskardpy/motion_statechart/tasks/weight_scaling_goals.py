@@ -42,9 +42,9 @@ class MaxManipulability(Task):
 
         artifacts.geometry.add_position_constraint(
             reference_velocity=1,
-            expr_goal=self.manipulability_threshold,
+            expression_goal=self.manipulability_threshold,
             quadratic_weight=1,
-            expr_current=manipulability,
+            expression_current=manipulability,
             name=self.name,
         )
 

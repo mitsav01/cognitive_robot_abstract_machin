@@ -42,7 +42,7 @@ class MissingActionResultError(GiskardException):
         return "No result message set."
 
     def suggest_correction(self) -> str:
-        return ""
+        return "You tried to access something before it was set."
 
 
 @dataclass
@@ -60,7 +60,7 @@ class DuplicateNameException(GiskardException):
         return f'A constraint named "{self.name}" already exists.'
 
     def suggest_correction(self) -> str:
-        return ""
+        return "You are likely setting names manually. Don't do that if you don't care about names."
 
 
 @dataclass
@@ -73,7 +73,7 @@ class NoControlledJointsError(SetupException):
         return "No joints are flagged as controlled."
 
     def suggest_correction(self) -> str:
-        return ""
+        return "Make sure robot_interface_config of Giskard is setup correctly."
 
 
 @dataclass
@@ -86,20 +86,7 @@ class JointRegistrationRequiresStandaloneModeError(SetupException):
         return "Joints only need to be registered in StandAlone mode."
 
     def suggest_correction(self) -> str:
-        return ""
-
-
-@dataclass
-class NoQPControllerConfigException(SetupException):
-    """
-    Raised when the motion statechart has constraints but no QP controller config was provided.
-    """
-
-    def error_message(self) -> str:
-        return "Motion Statechart has constraints, but no QP controller config is provided."
-
-    def suggest_correction(self) -> str:
-        return ""
+        return "Remove the manuel registration. For real robots, the joints are retrieved from the connected controllers."
 
 
 @dataclass
@@ -112,7 +99,7 @@ class MaxTrajectoryLengthException(PlanningException):
         return "Trajectory exceeded the maximum allowed length."
 
     def suggest_correction(self) -> str:
-        return ""
+        return "Look at the final state of the MotionStatechart to see which nodes are still running."
 
 
 @dataclass

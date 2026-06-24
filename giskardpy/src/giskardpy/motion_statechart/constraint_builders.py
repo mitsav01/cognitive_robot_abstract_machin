@@ -45,7 +45,7 @@ class GeometricConstraintBuilder:
         """
         Adds three constraints to move frame_P_current to frame_P_goal.
         Make sure that both points are expressed relative to the same frame!
-        :param frame_P_current: a vector describing a 3D point
+        :param frame_P_current: a vector describing a 3D point. It should depend on active dofs.
         :param frame_P_goal: a vector describing a 3D point
         :param reference_velocity: m/s
         """
@@ -62,22 +62,26 @@ class GeometricConstraintBuilder:
 
     def add_position_constraint(
         self,
-        expr_current: sm.SymbolicScalar,
-        expr_goal: sm.ScalarData,
+        expression_current: sm.SymbolicScalar,
+        expression_goal: sm.ScalarData,
         reference_velocity: sm.ScalarData,
         quadratic_weight: sm.ScalarData = DefaultWeights.WEIGHT_BELOW_CA,
         name: Optional[str] = None,
     ) -> None:
         """
         A wrapper around add_constraint. Will add a constraint that tries to move expr_current to expr_goal.
+        :param expression_current: a symbolic expression describing a 3D point. It should depend on active dofs.
+        :param expression_goal: a symbolic expression describing a 3D point
+        :param reference_velocity: value used for normalization m/s
+        :param quadratic_weight: name relative to other constraints
         """
 
-        error = expr_goal - expr_current
+        error = expression_goal - expression_current
         self.collection.add_equality_constraint(
             reference_velocity=reference_velocity,
             equality_bound=error,
             quadratic_weight=quadratic_weight,
-            task_expression=expr_current,
+            task_expression=expression_current,
             name=name,
         )
 
@@ -92,9 +96,9 @@ class GeometricConstraintBuilder:
         """
         Adds constraints to align frame_V_current with frame_V_goal. Make sure that both vectors are expressed
         relative to the same frame and are normalized to a length of 1.
-        :param frame_V_current: a vector describing a 3D vector
+        :param frame_V_current: a vector describing a 3D vector. It should depend on active dofs.
         :param frame_V_goal: a vector describing a 3D vector
-        :param reference_velocity: rad/s
+        :param reference_velocity: value used for normalization rad/s
         """
 
         angle = sm.safe_acos(frame_V_current.dot(frame_V_goal))
@@ -126,9 +130,9 @@ class GeometricConstraintBuilder:
         """
         Adds constraints to move frame_R_current to frame_R_goal. Make sure that both are expressed relative to the same
         frame.
-        :param frame_R_current: current rotation as rotation matrix
+        :param frame_R_current: current rotation as rotation matrix. It should depend on active dofs.
         :param frame_R_goal: goal rotation as rotation matrix
-        :param reference_velocity: rad/s
+        :param reference_velocity: value used for normalization rad/s
         """
 
         # avoid singularity
@@ -162,17 +166,19 @@ class GeometricConstraintBuilder:
         """
         Adds constraints to limit the translational velocity of frame_P_current. Be aware that the velocity is relative
         to frame.
-        :param frame_P_current: a vector describing a 3D point
+        :param frame_P_current: a vector describing a 3D point. It should depend on active dofs.
         :param max_violation: m/s
         """
 
-        trans_error = frame_P_current.norm()
-        trans_error = sm.if_eq_zero(trans_error, sm.Scalar(0.01), trans_error)
+        translation_error = frame_P_current.norm()
+        translation_error = sm.if_eq_zero(
+            translation_error, sm.Scalar(0.01), translation_error
+        )
         self.collection.add_velocity_constraint(
             upper_velocity_limit=max_velocity,
             lower_velocity_limit=-max_velocity,
             quadratic_weight=quadratic_weight,
-            task_expression=trans_error,
+            task_expression=translation_error,
             lower_slack_limit=-max_violation,
             upper_slack_limit=max_violation,
             velocity_limit=max_velocity,
@@ -190,7 +196,7 @@ class GeometricConstraintBuilder:
         """
         Add velocity constraints to limit the velocity of frame_R_current. Be aware that the velocity is relative to
         frame.
-        :param frame_R_current: Rotation matrix describing the current rotation.
+        :param frame_R_current: Rotation matrix describing the current rotation. It should depend on active dofs.
         :param max_velocity: rad/s
         """
 
