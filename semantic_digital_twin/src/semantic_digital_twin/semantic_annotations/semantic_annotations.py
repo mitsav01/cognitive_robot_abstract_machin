@@ -445,7 +445,7 @@ class ShelfLayer(HasSupportingSurface):
 
 
 @dataclass(eq=False)
-class Table(Furniture, HasSupportingSurface, HasLegs):
+class Table(Furniture, HasSupportingSurface):
     """
     A semantic annotation that represents a table.
     """
@@ -906,7 +906,7 @@ class CoffeeTable(Table):
 
 
 @dataclass(eq=False)
-class DiningTable(Table):
+class DiningTable(Table, HasLegs):
     """
     A dining table.
     """
@@ -920,7 +920,7 @@ class SideTable(Table):
 
 
 @dataclass(eq=False)
-class Desk(Table):
+class Desk(Table, HasLegs):
     """
     A desk.
     """

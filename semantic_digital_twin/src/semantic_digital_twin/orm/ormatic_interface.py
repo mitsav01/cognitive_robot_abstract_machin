@@ -1837,19 +1837,6 @@ class SofaDAO_objects_association(Base, AssociationDataAccessObject):
     )
 
 
-class TableDAO_legs_association(Base, AssociationDataAccessObject):
-    __tablename__ = "_71256982599188676809632984764672354445519855604058752071019270"
-
-    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-
-    source_tabledao_id: Mapped[int] = mapped_column(ForeignKey("TableDAO.database_id"))
-    target_legdao_id: Mapped[int] = mapped_column(ForeignKey("LegDAO.database_id"))
-
-    target: Mapped[LegDAO] = relationship(
-        "LegDAO", foreign_keys=[target_legdao_id], lazy="selectin"
-    )
-
-
 class TableDAO_objects_association(Base, AssociationDataAccessObject):
     __tablename__ = "_31838534710353540730159230236956687286764949961489382044173039"
 
@@ -1862,6 +1849,34 @@ class TableDAO_objects_association(Base, AssociationDataAccessObject):
 
     target: Mapped[HasRootBodyDAO] = relationship(
         "HasRootBodyDAO", foreign_keys=[target_hasrootbodydao_id], lazy="selectin"
+    )
+
+
+class DeskDAO_legs_association(Base, AssociationDataAccessObject):
+    __tablename__ = "_10176314740889856940587316011403342435210413678336650913832520"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    source_deskdao_id: Mapped[int] = mapped_column(ForeignKey("DeskDAO.database_id"))
+    target_legdao_id: Mapped[int] = mapped_column(ForeignKey("LegDAO.database_id"))
+
+    target: Mapped[LegDAO] = relationship(
+        "LegDAO", foreign_keys=[target_legdao_id], lazy="selectin"
+    )
+
+
+class DiningTableDAO_legs_association(Base, AssociationDataAccessObject):
+    __tablename__ = "_10192782960671076501422165727408973123214047575156624766586060"
+
+    database_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    source_diningtabledao_id: Mapped[int] = mapped_column(
+        ForeignKey("DiningTableDAO.database_id")
+    )
+    target_legdao_id: Mapped[int] = mapped_column(ForeignKey("LegDAO.database_id"))
+
+    target: Mapped[LegDAO] = relationship(
+        "LegDAO", foreign_keys=[target_legdao_id], lazy="selectin"
     )
 
 
@@ -20106,13 +20121,6 @@ class TableDAO(
     root: Mapped[BodyDAO] = relationship(
         "BodyDAO", uselist=False, foreign_keys=[root_id], post_update=True
     )
-    legs: Mapped[builtins.list[TableDAO_legs_association]] = relationship(
-        "TableDAO_legs_association",
-        collection_class=builtins.list,
-        cascade="all, delete-orphan",
-        foreign_keys="[TableDAO_legs_association.source_tabledao_id]",
-        lazy="selectin",
-    )
     objects: Mapped[builtins.list[TableDAO_objects_association]] = relationship(
         "TableDAO_objects_association",
         collection_class=builtins.list,
@@ -20165,6 +20173,14 @@ class DeskDAO(
         ForeignKey(TableDAO.database_id), primary_key=True, use_existing_column=True
     )
 
+    legs: Mapped[builtins.list[DeskDAO_legs_association]] = relationship(
+        "DeskDAO_legs_association",
+        collection_class=builtins.list,
+        cascade="all, delete-orphan",
+        foreign_keys="[DeskDAO_legs_association.source_deskdao_id]",
+        lazy="selectin",
+    )
+
     __mapper_args__ = {
         "polymorphic_identity": "DeskDAO",
         "inherit_condition": database_id == TableDAO.database_id,
@@ -20182,6 +20198,14 @@ class DiningTableDAO(
 
     database_id: Mapped[builtins.int] = mapped_column(
         ForeignKey(TableDAO.database_id), primary_key=True, use_existing_column=True
+    )
+
+    legs: Mapped[builtins.list[DiningTableDAO_legs_association]] = relationship(
+        "DiningTableDAO_legs_association",
+        collection_class=builtins.list,
+        cascade="all, delete-orphan",
+        foreign_keys="[DiningTableDAO_legs_association.source_diningtabledao_id]",
+        lazy="selectin",
     )
 
     __mapper_args__ = {
